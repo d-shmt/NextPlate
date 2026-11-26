@@ -187,6 +187,10 @@ class EssensplanerPanel extends HTMLElement {
 
   async _moveOrSwapMeal(srcDate, srcSlot, srcMeal, dstDate, dstSlot, dstMeal) {
     if (!this._hass) return;
+    if (!srcDate || !srcSlot) {
+      await this._saveMeal(dstDate, dstSlot, srcMeal);
+      return;
+    }
     if (srcDate === dstDate && srcSlot === dstSlot) return;
 
     await this._hass.callService("nextplate", "set_meal", {
@@ -412,6 +416,53 @@ class EssensplanerPanel extends HTMLElement {
           white-space: nowrap;
           cursor: text;
         }
+        .history-drawer {
+          position: fixed;
+          top: 0;
+          right: 0;
+          width: min(360px, 92vw);
+          height: 100vh;
+          background: var(--card-background-color, #1c1c1c);
+          border-left: 1px solid var(--divider-color, rgba(255, 255, 255, 0.14));
+          box-shadow: -8px 0 24px rgba(0, 0, 0, 0.4);
+          z-index: 100;
+          display: none;
+          flex-direction: column;
+          padding: 16px;
+          box-sizing: border-box;
+          gap: 12px;
+        }
+        .history-drawer.open {
+          display: flex;
+        }
+        .history-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .history-header h2 {
+          margin: 0;
+          font-size: 18px;
+          font-weight: 500;
+        }
+        .history-list {
+          flex: 1;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .history-item {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .history-empty {
+          color: var(--secondary-text-color, #aaa);
+          font-size: 13px;
+          text-align: center;
+          margin-top: 24px;
+        }
       </style>
       <div class="toolbar">
         <div class="title-group">
@@ -422,10 +473,20 @@ class EssensplanerPanel extends HTMLElement {
           <button id="prev-week">‹ Vorherige</button>
           <button id="today-btn">Heute</button>
           <button id="next-week">Nächste ›</button>
+          <button id="history-btn">Zwischenspeicher</button>
         </div>
       </div>
       <div class="content">
         <div class="grid" id="days-grid"></div>
+      </div>
+      <datalist id="meal-suggestions"></datalist>
+      <div class="history-drawer" id="history-drawer">
+        <div class="history-header">
+          <h2>Zwischenspeicher</h2>
+          <button class="clear-btn" id="history-close" title="Schließen">×</button>
+        </div>
+        <input type="text" id="history-search" placeholder="Gespeicherte Gerichte filtern…" />
+        <div class="history-list" id="history-list"></div>
       </div>
     `;
 
@@ -441,6 +502,85 @@ class EssensplanerPanel extends HTMLElement {
       this._startDate = this._addDays(this._startDate, 7);
       this._renderDays();
     });
+    this.shadowRoot.getElementById("history-btn").addEventListener("click", () => {
+      this._historyOpen = !this._historyOpen;
+      const drawer = this.shadowRoot.getElementById("history-drawer");
+      drawer.classList.toggle("open", this._historyOpen);
+      if (this._historyOpen) {
+        this._renderHistoryList();
+      }
+    });
+    this.shadowRoot.getElementById("history-close").addEventListener("click", () => {
+      this._historyOpen = false;
+      this.shadowRoot.getElementById("history-drawer").classList.remove("open");
+    });
+    this.shadowRoot.getElementById("history-search").addEventListener("input", () => {
+      this._renderHistoryList();
+    });
+  }
+
+  _renderHistoryList() {
+    const listEl = this.shadowRoot.getElementById("history-list");
+    const searchEl = this.shadowRoot.getElementById("history-search");
+    if (!listEl) return;
+    const query = (searchEl?.value || "").trim().toLowerCase();
+    const items = this._getHistory().filter((m) => m.toLowerCase().includes(query));
+
+    listEl.innerHTML = "";
+    if (items.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "history-empty";
+      empty.textContent = query ? "Keine passenden Gerichte gefunden." : "Noch keine Gerichte gespeichert.";
+      listEl.appendChild(empty);
+      return;
+    }
+
+    for (const meal of items) {
+      const itemRow = document.createElement("div");
+      itemRow.className = "history-item";
+
+      const chip = document.createElement("div");
+      chip.className = "meal-chip";
+      chip.draggable = true;
+      chip.title = "In einen Tag/Slot ziehen";
+
+      const handle = document.createElement("span");
+      handle.className = "drag-handle";
+      handle.textContent = "⋮⋮";
+
+      const textEl = document.createElement("span");
+      textEl.className = "meal-text";
+      textEl.textContent = meal;
+
+      chip.addEventListener("dragstart", (e) => {
+        this._dragData = { dateStr: null, slot: null, meal };
+        chip.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "copyMove";
+        e.dataTransfer.setData("text/plain", meal);
+      });
+      chip.addEventListener("dragend", () => {
+        chip.classList.remove("dragging");
+        this._dragData = null;
+        this.shadowRoot.querySelectorAll(".slot.drag-over").forEach((el) => {
+          el.classList.remove("drag-over");
+        });
+      });
+
+      chip.appendChild(handle);
+      chip.appendChild(textEl);
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "clear-btn";
+      delBtn.title = "Aus Zwischenspeicher entfernen";
+      delBtn.textContent = "×";
+      delBtn.addEventListener("click", () => {
+        this._removeFromHistory(meal);
+      });
+
+      itemRow.appendChild(chip);
+      itemRow.appendChild(delBtn);
+      listEl.appendChild(itemRow);
+    }
   }
 
   _renderDays() {
@@ -517,6 +657,7 @@ class EssensplanerPanel extends HTMLElement {
     const createInput = (initialValue, autoFocus = false) => {
       const input = document.createElement("input");
       input.type = "text";
+      input.setAttribute("list", "meal-suggestions");
       input.value = initialValue;
       input.placeholder = `${label} planen…`;
 

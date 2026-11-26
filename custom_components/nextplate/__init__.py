@@ -62,12 +62,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         meal: str = call.data["meal"]
         carry_over: bool = call.data.get("carry_over", True)
         await store.async_set_meal(day, slot, meal, carry_over=carry_over)
+        hass.bus.async_fire(f"{DOMAIN}_updated")
 
     async def handle_delete_meal(call: ServiceCall) -> None:
         day: date = call.data.get("date") or dt_util.now().date()
         slot: str = call.data["slot"]
         carry_over: bool = call.data.get("carry_over", False)
         await store.async_delete_meal(day, slot, carry_over=carry_over)
+        hass.bus.async_fire(f"{DOMAIN}_updated")
 
     if not hass.services.has_service(DOMAIN, SERVICE_SET_MEAL):
         hass.services.async_register(

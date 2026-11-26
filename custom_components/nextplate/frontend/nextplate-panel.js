@@ -15,6 +15,26 @@ class EssensplanerPanel extends HTMLElement {
     if (firstSet) {
       this._renderShell();
       this._loadMeals();
+      this._subscribeUpdates();
+    }
+  }
+
+  disconnectedCallback() {
+    if (this._unsubEvents) {
+      this._unsubEvents();
+      this._unsubEvents = null;
+    }
+  }
+
+  async _subscribeUpdates() {
+    if (!this._hass?.connection || this._unsubEvents) return;
+    try {
+      this._unsubEvents = await this._hass.connection.subscribeEvents(
+        () => this._loadMeals(),
+        "nextplate_updated"
+      );
+    } catch (err) {
+      console.error("Essensplaner: Fehler bei Live-Sync", err);
     }
   }
 

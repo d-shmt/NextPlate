@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Essensplaner",
+        "description": "Do you want to add Essensplaner (including calendar and sidebar dashboard)?"
+      }
+    },
+    "abort": {
+      "already_configured": "Essensplaner is already configured."
+    }
+  }
+}

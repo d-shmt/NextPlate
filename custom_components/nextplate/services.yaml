@@ -1,0 +1,64 @@
+set_meal:
+  name: Gericht planen
+  description: Trägt ein Gericht für Mittag oder Abend ein. Bei Abend wird standardmäßig der Mittag des Folgetags automatisch mitgefüllt.
+  fields:
+    date:
+      name: Datum
+      description: Datum im Format YYYY-MM-DD (Standard ist heute).
+      required: false
+      selector:
+        date:
+    slot:
+      name: Mahlzeit
+      description: Mittag oder Abend.
+      required: true
+      default: abend
+      selector:
+        select:
+          options:
+            - label: Mittag
+              value: mittag
+            - label: Abend
+              value: abend
+    meal:
+      name: Gericht
+      description: Name des Gerichts.
+      required: true
+      selector:
+        text:
+    carry_over:
+      name: Für nächsten Mittag übernehmen
+      description: Übernimmt das Abendessen automatisch als Mittagessen für den nächsten Tag.
+      required: false
+      default: true
+      selector:
+        boolean:
+
+delete_meal:
+  name: Gericht löschen
+  description: Entfernt ein geplantes Gericht für Mittag oder Abend.
+  fields:
+    date:
+      name: Datum
+      description: Datum im Format YYYY-MM-DD (Standard ist heute).
+      required: false
+      selector:
+        date:
+    slot:
+      name: Mahlzeit
+      description: Mittag oder Abend.
+      required: true
+      selector:
+        select:
+          options:
+            - label: Mittag
+              value: mittag
+            - label: Abend
+              value: abend
+    carry_over:
+      name: Auch nächsten Mittag löschen
+      description: Löscht auch das übernommene Mittagessen am Folgetag, falls es identisch ist.
+      required: false
+      default: false
+      selector:
+        boolean:

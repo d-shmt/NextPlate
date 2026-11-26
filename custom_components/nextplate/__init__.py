@@ -92,13 +92,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ]
     )
 
+    panel_file = frontend_dir / "nextplate-panel.js"
+    panel_version = int(panel_file.stat().st_mtime) if panel_file.exists() else 0
+
     await panel_custom.async_register_panel(
         hass,
         webcomponent_name="nextplate-panel",
         frontend_url_path=DOMAIN,
         sidebar_title=PANEL_TITLE,
         sidebar_icon=PANEL_ICON,
-        module_url=f"{STATIC_URL_PATH}/nextplate-panel.js",
+        module_url=f"{STATIC_URL_PATH}/nextplate-panel.js?v={panel_version}",
         require_admin=False,
     )
 

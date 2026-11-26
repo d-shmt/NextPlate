@@ -386,23 +386,20 @@ class EssensplanerPanel extends HTMLElement {
         </div>
       `;
 
-      card.appendChild(this._createSlotRow(iso, "mittag", "Mittag", dayMeals.mittag || "", false));
-      card.appendChild(this._createSlotRow(iso, "abend", "Abend", dayMeals.abend || "", true));
+      card.appendChild(this._createSlotRow(iso, "mittag", "Mittag", dayMeals.mittag || ""));
+      card.appendChild(this._createSlotRow(iso, "abend", "Abend", dayMeals.abend || ""));
 
       grid.appendChild(card);
     }
   }
 
-  _createSlotRow(dateStr, slot, label, value, showCarryHint) {
+  _createSlotRow(dateStr, slot, label, value) {
     const wrapper = document.createElement("div");
     wrapper.className = "slot";
 
     const labelEl = document.createElement("div");
     labelEl.className = "slot-label";
-    labelEl.innerHTML = `
-      <span>${label}</span>
-      ${showCarryHint ? '<span class="carry-badge">→ Morgen Mittag</span>' : ""}
-    `;
+    labelEl.innerHTML = `<span>${label}</span>`;
 
     const row = document.createElement("div");
     row.className = "input-row";

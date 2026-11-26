@@ -128,6 +128,18 @@ class EssensplanerPanel extends HTMLElement {
     this._saveHistory(list);
   }
 
+  _renameInHistory(oldMeal, newMeal) {
+    const trimmed = (newMeal || "").trim();
+    if (!trimmed || trimmed === oldMeal) {
+      if (this._historyOpen) this._renderHistoryList();
+      return;
+    }
+    const list = this._getHistory()
+      .map((item) => (item === oldMeal ? trimmed : item))
+      .filter((item, idx, arr) => arr.findIndex((x) => x.toLowerCase() === item.toLowerCase()) === idx);
+    this._saveHistory(list);
+  }
+
   _syncHistoryFromMeals() {
     const existing = this._getHistory();
     const lowerSet = new Set(existing.map((i) => i.toLowerCase()));
@@ -445,6 +457,17 @@ class EssensplanerPanel extends HTMLElement {
           font-size: 18px;
           font-weight: 500;
         }
+        #history-search {
+          flex: 0 0 auto;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .icon-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 8px 10px;
+        }
         .history-list {
           flex: 1;
           overflow-y: auto;
@@ -473,7 +496,11 @@ class EssensplanerPanel extends HTMLElement {
           <button id="prev-week">‹ Vorherige</button>
           <button id="today-btn">Heute</button>
           <button id="next-week">Nächste ›</button>
-          <button id="history-btn">Zwischenspeicher</button>
+          <button id="history-btn" class="icon-btn" title="Zwischenspeicher" aria-label="Zwischenspeicher">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1s-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+            </svg>
+          </button>
         </div>
       </div>
       <div class="content">
@@ -542,7 +569,7 @@ class EssensplanerPanel extends HTMLElement {
       const chip = document.createElement("div");
       chip.className = "meal-chip";
       chip.draggable = true;
-      chip.title = "In einen Tag/Slot ziehen";
+      chip.title = "In einen Tag/Slot ziehen oder klicken zum Bearbeiten";
 
       const handle = document.createElement("span");
       handle.className = "drag-handle";
@@ -551,6 +578,26 @@ class EssensplanerPanel extends HTMLElement {
       const textEl = document.createElement("span");
       textEl.className = "meal-text";
       textEl.textContent = meal;
+
+      textEl.addEventListener("click", () => {
+        const editInput = document.createElement("input");
+        editInput.type = "text";
+        editInput.value = meal;
+        const commit = () => this._renameInHistory(meal, editInput.value);
+        editInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") editInput.blur();
+          else if (e.key === "Escape") {
+            editInput.value = meal;
+            editInput.blur();
+          }
+        });
+        editInput.addEventListener("blur", commit);
+        itemRow.replaceChild(editInput, chip);
+        requestAnimationFrame(() => {
+          editInput.focus();
+          editInput.select();
+        });
+      });
 
       chip.addEventListener("dragstart", (e) => {
         this._dragData = { dateStr: null, slot: null, meal };

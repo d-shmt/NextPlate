@@ -1,60 +1,19 @@
-name: Release
+name: Release Please
 
 on:
   push:
-    tags:
-      - "v*"
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Release-Version (z. B. 0.2.0)"
-        required: true
-        type: string
+    branches:
+      - main
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
-  release:
+  release-please:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set version from tag or input
-        id: version
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION="${{ inputs.version }}"
-          else
-            VERSION="${GITHUB_REF_NAME#v}"
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Update manifest.json version (workflow_dispatch)
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          python3 -c '
-          import json
-          path = "custom_components/nextplate/manifest.json"
-          with open(path, "r", encoding="utf-8") as f:
-              data = json.load(f)
-          data["version"] = "${{ steps.version.outputs.version }}"
-          with open(path, "w", encoding="utf-8") as f:
-              json.dump(data, f, indent=2, ensure_ascii=False)
-              f.write("\n")
-          '
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add custom_components/nextplate/manifest.json
-          git diff --staged --quiet || git commit -m "chore: release ${{ steps.version.outputs.tag }}"
-          git tag -f "${{ steps.version.outputs.tag }}"
-          git push origin HEAD --tags
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - uses: googleapis/release-please-action@v4
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: ${{ steps.version.outputs.tag }}
-          generate_release_notes: true
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

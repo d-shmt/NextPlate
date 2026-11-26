@@ -6,6 +6,7 @@ class EssensplanerPanel extends HTMLElement {
     this._meals = {};
     this._startDate = this._getMondayOfWeek(this._getToday());
     this._dragData = null;
+    this._historyOpen = false;
     this._rendered = false;
   }
 
@@ -85,9 +86,75 @@ class EssensplanerPanel extends HTMLElement {
     try {
       const res = await this._hass.callWS({ type: "nextplate/get_meals" });
       this._meals = res?.meals || {};
+      this._syncHistoryFromMeals();
+      this._renderSuggestions();
       this._renderDays();
     } catch (err) {
       console.error("Essensplaner: Fehler beim Laden", err);
+    }
+  }
+
+  _getHistory() {
+    try {
+      const raw = localStorage.getItem("nextplate_meal_history");
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  _saveHistory(list) {
+    try {
+      localStorage.setItem("nextplate_meal_history", JSON.stringify(list.slice(0, 60)));
+    } catch {
+      // ignore storage errors
+    }
+    this._renderSuggestions();
+    if (this._historyOpen) {
+      this._renderHistoryList();
+    }
+  }
+
+  _addToHistory(meal) {
+    const trimmed = (meal || "").trim();
+    if (!trimmed) return;
+    const list = this._getHistory().filter((item) => item.toLowerCase() !== trimmed.toLowerCase());
+    list.unshift(trimmed);
+    this._saveHistory(list);
+  }
+
+  _removeFromHistory(meal) {
+    const list = this._getHistory().filter((item) => item !== meal);
+    this._saveHistory(list);
+  }
+
+  _syncHistoryFromMeals() {
+    const existing = this._getHistory();
+    const lowerSet = new Set(existing.map((i) => i.toLowerCase()));
+    let changed = false;
+    for (const dayMeals of Object.values(this._meals)) {
+      for (const slot of ["mittag", "abend"]) {
+        const val = (dayMeals?.[slot] || "").trim();
+        if (val && !lowerSet.has(val.toLowerCase())) {
+          existing.push(val);
+          lowerSet.add(val.toLowerCase());
+          changed = true;
+        }
+      }
+    }
+    if (changed) {
+      this._saveHistory(existing);
+    }
+  }
+
+  _renderSuggestions() {
+    const datalist = this.shadowRoot?.getElementById("meal-suggestions");
+    if (!datalist) return;
+    datalist.innerHTML = "";
+    for (const meal of this._getHistory()) {
+      const opt = document.createElement("option");
+      opt.value = meal;
+      datalist.appendChild(opt);
     }
   }
 
@@ -98,6 +165,7 @@ class EssensplanerPanel extends HTMLElement {
       await this._deleteMeal(dateStr, slot);
       return;
     }
+    this._addToHistory(trimmed);
     await this._hass.callService("nextplate", "set_meal", {
       date: dateStr,
       slot,
@@ -357,9 +425,6 @@ class EssensplanerPanel extends HTMLElement {
         </div>
       </div>
       <div class="content">
-        <div class="hint">
-          Tipp: Wenn du ein <strong>Abendessen</strong> einträgst, wird es automatisch als <strong>Mittagessen für den nächsten Tag</strong> übernommen.
-        </div>
         <div class="grid" id="days-grid"></div>
       </div>
     `;

@@ -4,7 +4,8 @@ class EssensplanerPanel extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._hass = null;
     this._meals = {};
-    this._startDate = this._getToday();
+    this._startDate = this._getMondayOfWeek(this._getToday());
+    this._dragData = null;
     this._rendered = false;
   }
 
@@ -41,6 +42,22 @@ class EssensplanerPanel extends HTMLElement {
     const next = new Date(d);
     next.setDate(next.getDate() + days);
     return next;
+  }
+
+  _getMondayOfWeek(d) {
+    const date = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const day = date.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    date.setDate(date.getDate() + diff);
+    return date;
+  }
+
+  _getIsoWeek(d) {
+    const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const dayNum = date.getUTCDay() || 7;
+    date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+    return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
   }
 
   async _loadMeals() {
@@ -80,6 +97,35 @@ class EssensplanerPanel extends HTMLElement {
     await this._loadMeals();
   }
 
+  async _moveOrSwapMeal(srcDate, srcSlot, srcMeal, dstDate, dstSlot, dstMeal) {
+    if (!this._hass) return;
+    if (srcDate === dstDate && srcSlot === dstSlot) return;
+
+    await this._hass.callService("nextplate", "set_meal", {
+      date: dstDate,
+      slot: dstSlot,
+      meal: srcMeal,
+      carry_over: dstSlot === "abend",
+    });
+
+    if (dstMeal && dstMeal.trim()) {
+      await this._hass.callService("nextplate", "set_meal", {
+        date: srcDate,
+        slot: srcSlot,
+        meal: dstMeal.trim(),
+        carry_over: srcSlot === "abend",
+      });
+    } else {
+      await this._hass.callService("nextplate", "delete_meal", {
+        date: srcDate,
+        slot: srcSlot,
+        carry_over: false,
+      });
+    }
+
+    await this._loadMeals();
+  }
+
   _renderShell() {
     if (this._rendered) return;
     this._rendered = true;
@@ -107,6 +153,19 @@ class EssensplanerPanel extends HTMLElement {
           margin: 0;
           font-size: 20px;
           font-weight: 500;
+        }
+        .title-group {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .kw-badge {
+          font-size: 13px;
+          font-weight: 600;
+          padding: 4px 10px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.18);
+          letter-spacing: 0.02em;
         }
         .nav {
           display: flex;
@@ -221,9 +280,56 @@ class EssensplanerPanel extends HTMLElement {
           color: var(--error-color, #f44336);
           background: rgba(244, 67, 54, 0.12);
         }
+        .slot.drag-over .input-row {
+          outline: 2px dashed var(--primary-color, #03a9f4);
+          outline-offset: 2px;
+          border-radius: 8px;
+          background: rgba(3, 169, 244, 0.08);
+        }
+        .meal-chip {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 10px;
+          border-radius: 8px;
+          border: 1px solid var(--divider-color, rgba(255, 255, 255, 0.18));
+          background: var(--secondary-background-color, rgba(255, 255, 255, 0.08));
+          color: var(--primary-text-color, #fff);
+          font-size: 14px;
+          cursor: grab;
+          user-select: none;
+          transition: opacity 0.15s ease, border-color 0.15s ease;
+        }
+        .meal-chip:hover {
+          border-color: var(--primary-color, #03a9f4);
+        }
+        .meal-chip.dragging {
+          opacity: 0.45;
+          cursor: grabbing;
+        }
+        .drag-handle {
+          color: var(--secondary-text-color, #aaa);
+          font-size: 14px;
+          line-height: 1;
+          letter-spacing: -1px;
+          flex-shrink: 0;
+        }
+        .meal-text {
+          flex: 1;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          cursor: text;
+        }
       </style>
       <div class="toolbar">
-        <h1>NextPlate</h1>
+        <div class="title-group">
+          <h1>NextPlate</h1>
+          <span class="kw-badge" id="kw-badge"></span>
+        </div>
         <div class="nav">
           <button id="prev-week">‹ Vorherige</button>
           <button id="today-btn">Heute</button>
@@ -243,7 +349,7 @@ class EssensplanerPanel extends HTMLElement {
       this._renderDays();
     });
     this.shadowRoot.getElementById("today-btn").addEventListener("click", () => {
-      this._startDate = this._getToday();
+      this._startDate = this._getMondayOfWeek(this._getToday());
       this._renderDays();
     });
     this.shadowRoot.getElementById("next-week").addEventListener("click", () => {
@@ -253,6 +359,11 @@ class EssensplanerPanel extends HTMLElement {
   }
 
   _renderDays() {
+    const kwBadge = this.shadowRoot.getElementById("kw-badge");
+    if (kwBadge) {
+      kwBadge.textContent = `KW ${this._getIsoWeek(this._startDate)}`;
+    }
+
     const grid = this.shadowRoot.getElementById("days-grid");
     if (!grid) return;
     grid.innerHTML = "";
@@ -296,37 +407,115 @@ class EssensplanerPanel extends HTMLElement {
     const row = document.createElement("div");
     row.className = "input-row";
 
-    const input = document.createElement("input");
-    input.type = "text";
-    input.value = value;
-    input.placeholder = `${label} planen…`;
+    wrapper.addEventListener("dragover", (e) => {
+      if (!this._dragData) return;
+      if (this._dragData.dateStr === dateStr && this._dragData.slot === slot) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      wrapper.classList.add("drag-over");
+    });
 
-    let lastSaved = value;
-    const commit = () => {
-      if (input.value.trim() !== lastSaved.trim()) {
-        lastSaved = input.value;
-        this._saveMeal(dateStr, slot, input.value);
-      }
-    };
-
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        input.blur();
+    wrapper.addEventListener("dragleave", (e) => {
+      if (!wrapper.contains(e.relatedTarget)) {
+        wrapper.classList.remove("drag-over");
       }
     });
-    input.addEventListener("blur", commit);
+
+    wrapper.addEventListener("drop", (e) => {
+      e.preventDefault();
+      wrapper.classList.remove("drag-over");
+      if (!this._dragData) return;
+      const { dateStr: srcDate, slot: srcSlot, meal: srcMeal } = this._dragData;
+      this._dragData = null;
+      this._moveOrSwapMeal(srcDate, srcSlot, srcMeal, dateStr, slot, value);
+    });
+
+    let lastSaved = value;
+
+    const createInput = (initialValue, autoFocus = false) => {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = initialValue;
+      input.placeholder = `${label} planen…`;
+
+      const commit = () => {
+        if (input.value.trim() !== lastSaved.trim()) {
+          lastSaved = input.value;
+          this._saveMeal(dateStr, slot, input.value);
+        } else if (initialValue.trim()) {
+          this._renderDays();
+        }
+      };
+
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          input.blur();
+        } else if (e.key === "Escape") {
+          input.value = lastSaved;
+          input.blur();
+        }
+      });
+      input.addEventListener("blur", commit);
+
+      if (autoFocus) {
+        requestAnimationFrame(() => {
+          input.focus();
+          input.select();
+        });
+      }
+      return input;
+    };
+
+    if (value.trim()) {
+      const chip = document.createElement("div");
+      chip.className = "meal-chip";
+      chip.draggable = true;
+      chip.title = "Ziehen zum Verschieben oder klicken zum Bearbeiten";
+
+      const handle = document.createElement("span");
+      handle.className = "drag-handle";
+      handle.textContent = "⋮⋮";
+
+      const textEl = document.createElement("span");
+      textEl.className = "meal-text";
+      textEl.textContent = value;
+
+      chip.addEventListener("dragstart", (e) => {
+        this._dragData = { dateStr, slot, meal: value };
+        chip.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", value);
+      });
+
+      chip.addEventListener("dragend", () => {
+        chip.classList.remove("dragging");
+        this._dragData = null;
+        this.shadowRoot.querySelectorAll(".slot.drag-over").forEach((el) => {
+          el.classList.remove("drag-over");
+        });
+      });
+
+      textEl.addEventListener("click", () => {
+        const editInput = createInput(value, true);
+        row.replaceChild(editInput, chip);
+      });
+
+      chip.appendChild(handle);
+      chip.appendChild(textEl);
+      row.appendChild(chip);
+    } else {
+      row.appendChild(createInput(""));
+    }
 
     const clearBtn = document.createElement("button");
     clearBtn.className = "clear-btn";
     clearBtn.title = "Löschen";
     clearBtn.textContent = "×";
     clearBtn.addEventListener("click", () => {
-      input.value = "";
       lastSaved = "";
       this._deleteMeal(dateStr, slot);
     });
 
-    row.appendChild(input);
     row.appendChild(clearBtn);
     wrapper.appendChild(labelEl);
     wrapper.appendChild(row);

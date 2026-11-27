@@ -364,10 +364,10 @@ class EssensplanerPanel extends HTMLElement {
           background: var(--card-background-color, #1c1c1c);
           border: 1px solid var(--divider-color, rgba(255, 255, 255, 0.15));
           border-radius: 12px;
-          padding: 16px;
+          padding: 12px;
           display: flex;
           flex-direction: column;
-          gap: 14px;
+          gap: 8px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
         :host([light]) .card {
@@ -384,7 +384,7 @@ class EssensplanerPanel extends HTMLElement {
           justify-content: space-between;
           align-items: center;
           font-weight: 600;
-          font-size: 16px;
+          font-size: 15px;
         }
         .today-badge {
           font-size: 11px;
@@ -396,13 +396,13 @@ class EssensplanerPanel extends HTMLElement {
         .slot {
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 3px;
         }
         .slot-label {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 500;
           color: var(--secondary-text-color, #aaa);
           text-transform: uppercase;
@@ -425,12 +425,12 @@ class EssensplanerPanel extends HTMLElement {
         input[type="text"] {
           flex: 1;
           min-width: 0;
-          padding: 8px 10px;
+          padding: 6px 8px;
           border-radius: 8px;
           border: 1px solid var(--divider-color, rgba(255, 255, 255, 0.2));
           background: var(--secondary-background-color, rgba(255, 255, 255, 0.06));
           color: var(--primary-text-color, #fff);
-          font-size: 14px;
+          font-size: 13px;
           outline: none;
         }
         :host([light]) input[type="text"] {
@@ -447,9 +447,9 @@ class EssensplanerPanel extends HTMLElement {
           border: none;
           color: var(--secondary-text-color, #aaa);
           cursor: pointer;
-          font-size: 18px;
+          font-size: 16px;
           line-height: 1;
-          padding: 4px 6px;
+          padding: 2px 4px;
           border-radius: 6px;
         }
         :host([light]) .clear-btn {
@@ -470,13 +470,13 @@ class EssensplanerPanel extends HTMLElement {
           min-width: 0;
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 8px 10px;
+          gap: 6px;
+          padding: 6px 8px;
           border-radius: 8px;
           border: 1px solid var(--divider-color, rgba(255, 255, 255, 0.2));
           background: var(--secondary-background-color, rgba(255, 255, 255, 0.08));
           color: var(--primary-text-color, #fff);
-          font-size: 14px;
+          font-size: 13px;
           cursor: grab;
           user-select: none;
           transition: opacity 0.15s ease, border-color 0.15s ease;

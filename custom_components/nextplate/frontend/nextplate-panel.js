@@ -264,9 +264,9 @@ class EssensplanerPanel extends HTMLElement {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          flex-wrap: wrap;
+          flex-wrap: nowrap;
           gap: 12px;
-          padding: 16px 24px;
+          padding: 14px 20px;
           background: var(--app-header-background-color, var(--primary-color));
           color: var(--app-header-text-color, #fff);
         }
@@ -274,11 +274,13 @@ class EssensplanerPanel extends HTMLElement {
           margin: 0;
           font-size: 20px;
           font-weight: 500;
+          white-space: nowrap;
         }
         .title-group {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 10px;
+          min-width: 0;
         }
         .kw-badge {
           font-size: 13px;
@@ -287,23 +289,26 @@ class EssensplanerPanel extends HTMLElement {
           border-radius: 999px;
           background: rgba(255, 255, 255, 0.18);
           letter-spacing: 0.02em;
+          white-space: nowrap;
         }
         :host([light]) .kw-badge {
           background: rgba(0, 0, 0, 0.1);
         }
         .nav {
           display: flex;
-          gap: 8px;
+          gap: 6px;
           align-items: center;
+          flex-shrink: 0;
         }
         .nav button {
           background: rgba(255, 255, 255, 0.16);
           color: inherit;
           border: none;
           border-radius: 6px;
-          padding: 8px 12px;
+          padding: 8px 10px;
           cursor: pointer;
           font-size: 14px;
+          white-space: nowrap;
         }
         :host([light]) .nav button {
           background: rgba(0, 0, 0, 0.08);
@@ -313,6 +318,29 @@ class EssensplanerPanel extends HTMLElement {
         }
         :host([light]) .nav button:hover {
           background: rgba(0, 0, 0, 0.14);
+        }
+        @media (max-width: 600px) {
+          .toolbar {
+            padding: 10px 12px;
+            gap: 8px;
+          }
+          .toolbar h1 {
+            font-size: 17px;
+          }
+          .title-group {
+            gap: 6px;
+          }
+          .kw-badge {
+            font-size: 11px;
+            padding: 2px 6px;
+          }
+          .nav {
+            gap: 4px;
+          }
+          .nav button {
+            padding: 6px 8px;
+            font-size: 13px;
+          }
         }
         .content {
           padding: 20px 24px;

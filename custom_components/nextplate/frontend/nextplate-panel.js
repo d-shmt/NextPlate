@@ -18,6 +18,19 @@ class EssensplanerPanel extends HTMLElement {
       this._loadMeals();
       this._subscribeUpdates();
     }
+    this._updateTheme();
+  }
+
+  _updateTheme() {
+    if (!this.shadowRoot) return;
+    const isDark = this._hass?.themes?.darkMode ?? window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (isDark) {
+      this.shadowRoot.host.setAttribute('dark', '');
+      this.shadowRoot.host.removeAttribute('light');
+    } else {
+      this.shadowRoot.host.setAttribute('light', '');
+      this.shadowRoot.host.removeAttribute('dark');
+    }
   }
 
   disconnectedCallback() {
@@ -243,6 +256,10 @@ class EssensplanerPanel extends HTMLElement {
           font-family: var(--paper-font-body1_-_font-family, Roboto, sans-serif);
           box-sizing: border-box;
         }
+        :host([light]) {
+          background: var(--primary-background-color, #f4f6f8);
+          color: var(--primary-text-color, #212121);
+        }
         .toolbar {
           display: flex;
           align-items: center;
@@ -271,6 +288,9 @@ class EssensplanerPanel extends HTMLElement {
           background: rgba(255, 255, 255, 0.18);
           letter-spacing: 0.02em;
         }
+        :host([light]) .kw-badge {
+          background: rgba(0, 0, 0, 0.1);
+        }
         .nav {
           display: flex;
           gap: 8px;
@@ -285,8 +305,14 @@ class EssensplanerPanel extends HTMLElement {
           cursor: pointer;
           font-size: 14px;
         }
+        :host([light]) .nav button {
+          background: rgba(0, 0, 0, 0.08);
+        }
         .nav button:hover {
           background: rgba(255, 255, 255, 0.26);
+        }
+        :host([light]) .nav button:hover {
+          background: rgba(0, 0, 0, 0.14);
         }
         .content {
           padding: 20px 24px;
@@ -298,6 +324,9 @@ class EssensplanerPanel extends HTMLElement {
           font-size: 13px;
           color: var(--secondary-text-color, #aaa);
         }
+        :host([light]) .hint {
+          color: var(--secondary-text-color, #666);
+        }
         .grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
@@ -305,12 +334,18 @@ class EssensplanerPanel extends HTMLElement {
         }
         .card {
           background: var(--card-background-color, #1c1c1c);
-          border: 1px solid var(--divider-color, rgba(255, 255, 255, 0.12));
+          border: 1px solid var(--divider-color, rgba(255, 255, 255, 0.15));
           border-radius: 12px;
           padding: 16px;
           display: flex;
           flex-direction: column;
           gap: 14px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        :host([light]) .card {
+          background: var(--card-background-color, #ffffff);
+          border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.14));
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
         }
         .card.today {
           border-color: var(--primary-color, #03a9f4);
@@ -345,6 +380,9 @@ class EssensplanerPanel extends HTMLElement {
           text-transform: uppercase;
           letter-spacing: 0.04em;
         }
+        :host([light]) .slot-label {
+          color: var(--secondary-text-color, #666);
+        }
         .carry-badge {
           font-size: 11px;
           text-transform: none;
@@ -361,14 +399,20 @@ class EssensplanerPanel extends HTMLElement {
           min-width: 0;
           padding: 8px 10px;
           border-radius: 8px;
-          border: 1px solid var(--divider-color, rgba(255, 255, 255, 0.18));
-          background: var(--secondary-background-color, rgba(255, 255, 255, 0.05));
+          border: 1px solid var(--divider-color, rgba(255, 255, 255, 0.2));
+          background: var(--secondary-background-color, rgba(255, 255, 255, 0.06));
           color: var(--primary-text-color, #fff);
           font-size: 14px;
           outline: none;
         }
+        :host([light]) input[type="text"] {
+          border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.18));
+          background: var(--secondary-background-color, rgba(0, 0, 0, 0.03));
+          color: var(--primary-text-color, #212121);
+        }
         input[type="text"]:focus {
           border-color: var(--primary-color, #03a9f4);
+          box-shadow: 0 0 0 2px rgba(3, 169, 244, 0.15);
         }
         .clear-btn {
           background: transparent;
@@ -379,6 +423,9 @@ class EssensplanerPanel extends HTMLElement {
           line-height: 1;
           padding: 4px 6px;
           border-radius: 6px;
+        }
+        :host([light]) .clear-btn {
+          color: var(--secondary-text-color, #666);
         }
         .clear-btn:hover {
           color: var(--error-color, #f44336);
@@ -398,13 +445,18 @@ class EssensplanerPanel extends HTMLElement {
           gap: 8px;
           padding: 8px 10px;
           border-radius: 8px;
-          border: 1px solid var(--divider-color, rgba(255, 255, 255, 0.18));
+          border: 1px solid var(--divider-color, rgba(255, 255, 255, 0.2));
           background: var(--secondary-background-color, rgba(255, 255, 255, 0.08));
           color: var(--primary-text-color, #fff);
           font-size: 14px;
           cursor: grab;
           user-select: none;
           transition: opacity 0.15s ease, border-color 0.15s ease;
+        }
+        :host([light]) .meal-chip {
+          border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.16));
+          background: var(--secondary-background-color, rgba(0, 0, 0, 0.04));
+          color: var(--primary-text-color, #212121);
         }
         .meal-chip:hover {
           border-color: var(--primary-color, #03a9f4);
@@ -420,6 +472,9 @@ class EssensplanerPanel extends HTMLElement {
           letter-spacing: -1px;
           flex-shrink: 0;
         }
+        :host([light]) .drag-handle {
+          color: var(--secondary-text-color, #666);
+        }
         .meal-text {
           flex: 1;
           min-width: 0;
@@ -428,14 +483,28 @@ class EssensplanerPanel extends HTMLElement {
           white-space: nowrap;
           cursor: text;
         }
+        .history-backdrop {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          background: rgba(0, 0, 0, 0.4);
+          z-index: 99;
+          display: none;
+        }
+        .history-backdrop.open {
+          display: block;
+        }
         .history-drawer {
           position: fixed;
           top: 0;
           right: 0;
-          width: min(360px, 92vw);
+          width: 380px;
+          max-width: 90vw;
           height: 100vh;
           background: var(--card-background-color, #1c1c1c);
-          border-left: 1px solid var(--divider-color, rgba(255, 255, 255, 0.14));
+          border-left: 1px solid var(--divider-color, rgba(255, 255, 255, 0.15));
           box-shadow: -8px 0 24px rgba(0, 0, 0, 0.4);
           z-index: 100;
           display: none;
@@ -443,9 +512,40 @@ class EssensplanerPanel extends HTMLElement {
           padding: 16px;
           box-sizing: border-box;
           gap: 12px;
+          transform: translateX(100%);
+          transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        :host([light]) .history-drawer {
+          background: var(--card-background-color, #ffffff);
+          border-left: 1px solid var(--divider-color, rgba(0, 0, 0, 0.14));
+          box-shadow: -8px 0 24px rgba(0, 0, 0, 0.15);
         }
         .history-drawer.open {
           display: flex;
+          transform: translateX(0);
+        }
+        @media (max-width: 600px) {
+          .history-drawer {
+            top: auto;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            max-width: 100%;
+            height: 80vh;
+            max-height: 85vh;
+            border-left: none;
+            border-top: 1px solid var(--divider-color, rgba(255, 255, 255, 0.15));
+            border-radius: 20px 20px 0 0;
+            padding-bottom: max(24px, env(safe-area-inset-bottom));
+            transform: translateY(100%);
+          }
+          :host([light]) .history-drawer {
+            border-top: 1px solid var(--divider-color, rgba(0, 0, 0, 0.14));
+          }
+          .history-drawer.open {
+            transform: translateY(0);
+          }
         }
         .history-header {
           display: flex;
@@ -486,6 +586,9 @@ class EssensplanerPanel extends HTMLElement {
           text-align: center;
           margin-top: 24px;
         }
+        :host([light]) .history-empty {
+          color: var(--secondary-text-color, #666);
+        }
       </style>
       <div class="toolbar">
         <div class="title-group">
@@ -515,6 +618,7 @@ class EssensplanerPanel extends HTMLElement {
         <div class="grid" id="days-grid"></div>
       </div>
       <datalist id="meal-suggestions"></datalist>
+      <div class="history-backdrop" id="history-backdrop"></div>
       <div class="history-drawer" id="history-drawer">
         <div class="history-header">
           <h2>Zwischenspeicher</h2>
@@ -540,7 +644,9 @@ class EssensplanerPanel extends HTMLElement {
     this.shadowRoot.getElementById("history-btn").addEventListener("click", () => {
       this._historyOpen = !this._historyOpen;
       const drawer = this.shadowRoot.getElementById("history-drawer");
+      const backdrop = this.shadowRoot.getElementById("history-backdrop");
       drawer.classList.toggle("open", this._historyOpen);
+      backdrop.classList.toggle("open", this._historyOpen);
       if (this._historyOpen) {
         this._renderHistoryList();
       }
@@ -548,6 +654,12 @@ class EssensplanerPanel extends HTMLElement {
     this.shadowRoot.getElementById("history-close").addEventListener("click", () => {
       this._historyOpen = false;
       this.shadowRoot.getElementById("history-drawer").classList.remove("open");
+      this.shadowRoot.getElementById("history-backdrop").classList.remove("open");
+    });
+    this.shadowRoot.getElementById("history-backdrop").addEventListener("click", () => {
+      this._historyOpen = false;
+      this.shadowRoot.getElementById("history-drawer").classList.remove("open");
+      this.shadowRoot.getElementById("history-backdrop").classList.remove("open");
     });
     this.shadowRoot.getElementById("history-search").addEventListener("input", () => {
       this._renderHistoryList();
